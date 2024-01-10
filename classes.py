@@ -6,10 +6,14 @@ class Student:
         self.gender = gender
         self.finished_courses = []
         self.courses_in_progress = []
-        self.grades = {'ccs': [9, 10]}
+        self.grades = {}
 
-    def add_courses(self, course_name):
-        self.finished_courses.append(course_name)
+    def add_finished_course(self, course):
+        if course in self.courses_in_progress:
+            self.finished_courses.append(course)
+            self.courses_in_progress.remove(course)
+        else:
+            return 'Ошибка: студент на данном курсе не учился'
 
     def rate_lecture(self, lecture, course, grade):
         if (isinstance(lecture, Lecturer)
@@ -25,8 +29,8 @@ class Student:
                 'Средняя оценка за домашние задания: '
                 f'{self._get_average_grade():g}\n'
                 'Курсы в процессе изучения: '
-                f'{','.join(self.courses_in_progress)}\n'
-                f'Завершенные курсы: {''.join(self.finished_courses)}')
+                f'{', '.join(self.courses_in_progress)}\n'
+                f'Завершенные курсы: {', '.join(self.finished_courses)}')
 
     def __eq__(self, other):
         if isinstance(other, Student):
@@ -48,7 +52,10 @@ class Student:
 
     def _get_average_grade(self):
         all_grades = sum(self.grades.values(), [])
-        return sum(all_grades) / len(all_grades)
+        if all_grades:
+            return sum(all_grades) / len(all_grades)
+        else:
+            return 0
 
 
 class Mentor:
@@ -67,7 +74,7 @@ class Lecturer(Mentor):
 
     def __init__(self, name, surname):
         super().__init__(name, surname)
-        self.grades = {'html': [], 'ccs': [9, 10], 'java': [], 'sql': [7, 8]}
+        self.grades = {}
 
     def __str__(self):
         return (super().__str__()
@@ -94,7 +101,10 @@ class Lecturer(Mentor):
 
     def _get_average_grade(self):
         all_grades = sum(self.grades.values(), [])
-        return sum(all_grades) / len(all_grades)
+        if all_grades:
+            return sum(all_grades) / len(all_grades)
+        else:
+            return 0
 
 
 class Reviewer(Mentor):
@@ -108,48 +118,56 @@ class Reviewer(Mentor):
             return 'Ошибка: неверные данные при оценке студента'
 
 
-a_st = Student('A_Student', 'First', 'male')
-a_st.finished_courses += ['Git']
-a_st.courses_in_progress += ['Python']
-a_st.grades['Git'] = [10, 10, 10, 10, 10]
-a_st.grades['Python'] = [10, 10]
+def aver_stud_grade(students, course):
+    grades_course_hw = [grade for st in students
+                        if course in st.courses_in_progress
+                        for grade in st.grades.get(course, [])]
+    if grades_course_hw:
+        return sum(grades_course_hw) / len(grades_course_hw)
+    else:
+        return 0
 
-b_st = Student('B_Student', 'Second', 'male')
-b_st.finished_courses += ['Git']
-b_st.courses_in_progress += ['Python']
-b_st.grades['Git'] = [10, 10, 10, 10, 10]
-b_st.grades['Python'] = [10, 10]
 
-a_lec = Lecturer('A_Lecturer', 'A_per')
-a_lec.courses_attached.append('Python')
+def aver_lec_grade(lecturers, course):
+    grades_course_lec = [grade for lec in lecturers
+                         if course in lec.courses_attached
+                         for grade in lec.grades.get(course, [])]
+    if grades_course_lec:
+        return sum(grades_course_lec) / len(grades_course_lec)
+    else:
+        return 0
 
-b_lec = Lecturer('B_Lecturer', 'B_per')
-b_lec.courses_attached.append('Python')
+
+a_st = Student('A_Student', 'S_first', 'male')
+a_st.courses_in_progress += ['Python', 'Git']
+a_st.grades['Git'] = [10, 8, 10, 10, 8]
+a_st.grades['Python'] = [10, 9]
+
+b_st = Student('B_Student', 'S_second', 'male')
+b_st.courses_in_progress += ['Python', 'Git']
+b_st.grades['Git'] = [10, 10, 8, 8, 10]
+b_st.grades['Python'] = [10, 9]
+
+
+a_lec = Lecturer('A_Lecturer', 'L_first')
+a_lec.courses_attached += ['Python']
+
+b_lec = Lecturer('B_Lecturer', 'L_second')
+b_lec.courses_attached += ['Python', 'Git']
 
 a_rev = Reviewer('A_Reviewer', 'R_first')
 a_rev.courses_attached += ['Python']
 
 b_rev = Reviewer('B_Reviewer', 'R_second')
-b_rev.courses_attached += ['Python']
+b_rev.courses_attached += ['Python', 'Git']
 
-a_rev.rate_hw(a_st, 'Python', 9.9)
-print(a_st.grades)
-# a_rev.rate_hw(a_st, 'Python', 10)
-print(a_st.grades)
-# a_rev.rate_hw(a_st, 'Python', 10)
-print(a_st.grades, '\n')
-
-print(a_lec.grades)
-print(a_lec)
-a_st.rate_lecture(a_lec, 'Python', 9)
-print(a_lec.grades, '\n')
-
-print(a_lec, '\n')
-
-print(a_rev, '\n')
 print(a_st, '\n')
-print(b_st, '\n')
+b_rev.rate_hw(a_st, 'Git', 8)
+a_st.add_finished_course('Git')
+print('Студент A закончил курс по Git...')
 
+print(a_st, '\n')
+print(b_st)
 print('a_st == b_st:', a_st == b_st)
 print('a_st != b_st:', a_st != b_st)
 print('a_st > b_st:', a_st > b_st)
@@ -157,12 +175,14 @@ print('a_st < b_st:', a_st < b_st)
 print('a_st <= b_st:', a_st <= b_st)
 print('a_st >= b_st:', a_st >= b_st, '\n')
 
+print(a_lec)
+a_st.rate_lecture(a_lec, 'Python', 9)
+b_st.rate_lecture(b_lec, 'Git', 10)
+print(a_lec, '\n')
+print(b_lec)
 print('a_lec == b_lec:', a_lec == b_lec)
 print('a_lec != b_lec:', a_lec != b_lec)
 print('a_lec > b_lec:', a_lec > b_lec)
 print('a_lec < b_lec:', a_lec < b_lec)
 print('a_lec <= b_lec:', a_lec <= b_lec)
 print('a_lec >= b_lec:', a_lec >= b_lec, '\n')
-
-print(a_lec, b_lec, sep='\n')
-
